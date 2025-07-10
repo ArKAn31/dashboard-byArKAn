@@ -4,50 +4,82 @@ import pandas as pd
 import plotly.express as px
 import hashlib
 
-# Connexion à la base users
-conn_users = sqlite3.connect("users.db", check_same_thread=False)
-cur_users = conn_users.cursor()
+# -------------------------------
+# CSS Design custom
+# -------------------------------
+def set_custom_css():
+    st.markdown("""
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;500;700&display=swap');
 
-# Création table users si inexistante
-cur_users.execute('''
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE,
-    password TEXT
-)
-''')
-conn_users.commit()
+        html, body, [class*="css"] {
+            font-family: 'Roboto', sans-serif;
+            background-color: #fdfcf9;
+            color: #1f1f1f;
+        }
 
-# Connexion à la base trades
-conn_trades = sqlite3.connect("trades.db", check_same_thread=False)
-cur_trades = conn_trades.cursor()
+        .stButton>button {
+            background-color: #f2e9e4;
+            color: black;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            padding: 0.5em 1em;
+            font-weight: 500;
+        }
 
-# Création table trades si inexistante
-cur_trades.execute('''
-CREATE TABLE IF NOT EXISTS trades (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT,
-    paire TEXT,
-    direction TEXT,
-    taille_position REAL,
-    prix_entree REAL,
-    prix_sortie REAL,
-    capital REAL
-)
-''')
-conn_trades.commit()
+        .stTextInput>div>div>input, .stNumberInput input, .stSelectbox>div>div {
+            background-color: #ffffff;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 0.3em 0.8em;
+        }
 
-# Fonction pour hasher les mots de passe
+        .stRadio > div {
+            gap: 1.5em;
+        }
+
+        .stTabs [data-baseweb="tab"] {
+            background-color: #ffffff !important;
+            color: #222 !important;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .stTabs [aria-selected="true"] {
+            background: #f2e9e4 !important;
+            font-weight: bold;
+        }
+
+        .stDataFrame {
+            background-color: #ffffff !important;
+            border-radius: 10px;
+            padding: 1em;
+        }
+
+        .stDownloadButton button {
+            background-color: #d8e2dc;
+            color: black;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        .stPlotlyChart {
+            padding-top: 1em;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+# -------------------------------
+# Fonctions utilisateur
+# -------------------------------
+
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# Fonction login
 def login(username, password):
     hashed = hash_password(password)
     cur_users.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, hashed))
     return cur_users.fetchone() is not None
 
-# Fonction inscription
 def register(username, password):
     hashed = hash_password(password)
     try:
@@ -57,16 +89,48 @@ def register(username, password):
     except sqlite3.IntegrityError:
         return False
 
-# Config Streamlit
+# -------------------------------
+# Base de données
+# -------------------------------
+conn_users = sqlite3.connect("users.db", check_same_thread=False)
+cur_users = conn_users.cursor()
+cur_users.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password TEXT
+    )
+''')
+conn_users.commit()
+
+conn_trades = sqlite3.connect("trades.db", check_same_thread=False)
+cur_trades = conn_trades.cursor()
+cur_trades.execute('''
+    CREATE TABLE IF NOT EXISTS trades (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        paire TEXT,
+        direction TEXT,
+        taille_position REAL,
+        prix_entree REAL,
+        prix_sortie REAL,
+        capital REAL
+    )
+''')
+conn_trades.commit()
+
+# -------------------------------
+# App
+# -------------------------------
 st.set_page_config(page_title="Dashboard Trading Pro", layout="wide")
+set_custom_css()
+
 st.title("📊 Dashboard Trading Pro")
 
-# Initialisation session
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.username = ""
 
-# Interface Connexion / Inscription
 if not st.session_state.logged_in:
     st.subheader("🔐 Connexion / Inscription")
 
@@ -81,7 +145,7 @@ if not st.session_state.logged_in:
                 if login(username_login, password_login):
                     st.session_state.logged_in = True
                     st.session_state.username = username_login
-                    st.success(f"✅ Connecté avec succès, bienvenue {username_login} !")
+                    st.success(f"✅ Connecté, bienvenue {username_login} !")
                     st.rerun()
                 else:
                     st.error("❌ Identifiants incorrects.")
@@ -106,16 +170,14 @@ if not st.session_state.logged_in:
                     else:
                         st.error("❌ Ce nom d'utilisateur est déjà pris.")
 
-# Interface après connexion
+# -------------------------------
+# Interface principale
+# -------------------------------
 else:
     st.success(f"👋 Bienvenue {st.session_state.username}")
     st.header("💼 Nouveau Trade")
 
-    paires = [
-        "EUR/USD", "USD/JPY", "GBP/USD", "USD/CHF", "AUD/USD", "BTC/USDT",
-        "ETH/USDT", "XAU/USD", "USD/CAD", "NZD/USD", "EUR/JPY", "GBP/JPY",
-        "LTC/USDT", "ADA/USDT", "DOGE/USDT", "SOL/USDT", "DOT/USDT", "AVAX/USDT"
-    ]
+    paires = ["EUR/USD", "BTC/USDT", "ETH/USDT", "XAU/USD", "GBP/USD", "USD/JPY"]
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -129,30 +191,17 @@ else:
         prix_sortie = st.number_input("🎯 Prix de sortie", format="%.5f")
 
     if st.button("✅ Enregistrer le trade"):
-        if capital <= 0:
-            st.error("Le capital doit être supérieur à 0.")
-        elif taille_pct <= 0:
-            st.error("La taille de la position doit être supérieure à 0%.")
-        elif prix_entree <= 0 or prix_sortie <= 0:
-            st.error("Les prix doivent être supérieurs à 0.")
+        if capital <= 0 or prix_entree <= 0 or prix_sortie <= 0 or taille_pct <= 0:
+            st.error("❌ Vérifiez que tous les champs sont bien remplis.")
         else:
             cur_trades.execute('''
                 INSERT INTO trades (username, paire, direction, taille_position, prix_entree, prix_sortie, capital)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                st.session_state.username,
-                paire,
-                direction,
-                taille_pct,
-                prix_entree,
-                prix_sortie,
-                capital
-            ))
+            ''', (st.session_state.username, paire, direction, taille_pct, prix_entree, prix_sortie, capital))
             conn_trades.commit()
             st.success("💾 Trade enregistré avec succès !")
 
     st.divider()
-
     st.subheader("📈 Historique de vos trades")
     cur_trades.execute("SELECT * FROM trades WHERE username = ?", (st.session_state.username,))
     rows = cur_trades.fetchall()
@@ -164,11 +213,12 @@ else:
              else (row["Prix entrée"] - row["Prix sortie"]))
              * row["Capital"] * (row["Taille %"] / 100), axis=1
         )
+
         df_display = df[["ID", "Paire", "Direction", "Taille %", "Prix entrée", "Prix sortie", "Capital", "Gain/Perte (€)"]]
 
         def highlight_direction(row):
-            color = 'background-color: #d4f8d4' if row.Direction == 'BUY' else 'background-color: #f8d4d4'
-            return [color]*len(row)
+            color = 'background-color: #d3f8d3' if row.Direction == 'BUY' else 'background-color: #f8d3d3'
+            return [color] * len(row)
 
         st.dataframe(df_display.style.apply(highlight_direction, axis=1), use_container_width=True)
 
@@ -178,7 +228,6 @@ else:
 
         csv = df_display.to_csv(index=False).encode('utf-8')
         st.download_button("⬇️ Exporter l'historique CSV", data=csv, file_name="historique_trades.csv", mime="text/csv")
-
     else:
         st.info("Aucun trade enregistré pour l’instant.")
 
@@ -186,6 +235,7 @@ else:
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.rerun()
+
 
 
 
