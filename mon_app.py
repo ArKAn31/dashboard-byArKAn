@@ -81,8 +81,7 @@ if not st.session_state.logged_in:
                 if login(username_login, password_login):
                     st.session_state.logged_in = True
                     st.session_state.username = username_login
-                    st.success(f"✅ Connecté avec succès, bienvenue {username_login} !")
-                    st.experimental_rerun()
+                    st.experimental_rerun()  # rerun immédiat, pas de message ici
                 else:
                     st.error("❌ Identifiants incorrects.")
 
