@@ -37,17 +37,17 @@ CREATE TABLE IF NOT EXISTS trades (
 ''')
 conn_trades.commit()
 
-# Fonction pour hasher les mots de passe (SHA256 simple)
+# Fonction pour hasher les mots de passe
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# Fonction pour vérifier login
+# Fonction login
 def login(username, password):
     hashed = hash_password(password)
     cur_users.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, hashed))
     return cur_users.fetchone() is not None
 
-# Fonction pour enregistrer un nouvel utilisateur
+# Fonction inscription
 def register(username, password):
     hashed = hash_password(password)
     try:
@@ -57,16 +57,16 @@ def register(username, password):
     except sqlite3.IntegrityError:
         return False
 
-# Config page
+# Config Streamlit
 st.set_page_config(page_title="Dashboard Trading Pro", layout="wide")
 st.title("📊 Dashboard Trading Pro")
 
-# Initialisation session_state
+# Initialisation session
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.username = ""
 
-# Si pas connecté, proposer inscription ou login
+# Interface Connexion / Inscription
 if not st.session_state.logged_in:
     st.subheader("🔐 Connexion / Inscription")
 
@@ -81,7 +81,8 @@ if not st.session_state.logged_in:
                 if login(username_login, password_login):
                     st.session_state.logged_in = True
                     st.session_state.username = username_login
-                    st.experimental_rerun()  # rerun immédiat, pas de message ici
+                    st.success(f"✅ Connecté avec succès, bienvenue {username_login} !")
+                    st.rerun()
                 else:
                     st.error("❌ Identifiants incorrects.")
 
@@ -105,11 +106,11 @@ if not st.session_state.logged_in:
                     else:
                         st.error("❌ Ce nom d'utilisateur est déjà pris.")
 
+# Interface après connexion
 else:
     st.success(f"👋 Bienvenue {st.session_state.username}")
     st.header("💼 Nouveau Trade")
 
-    # Liste étendue de paires Forex + Crypto
     paires = [
         "EUR/USD", "USD/JPY", "GBP/USD", "USD/CHF", "AUD/USD", "BTC/USDT",
         "ETH/USDT", "XAU/USD", "USD/CAD", "NZD/USD", "EUR/JPY", "GBP/JPY",
@@ -184,7 +185,7 @@ else:
     if st.button("🚪 Se déconnecter"):
         st.session_state.logged_in = False
         st.session_state.username = ""
-        st.experimental_rerun()
+        st.rerun()
 
 
 
